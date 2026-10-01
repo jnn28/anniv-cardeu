@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Little Website</title>
+<link rel="stylesheet" href="css/style.css">
+<!-- The 3 fonts that give the site its "y2k / retro digital /
+     chrome-hearts-gothic" look are @font-face'd inside style.css
+     itself (search it for "WEB FONTS") and load from files in
+     assets/fonts/, so there's nothing to add here — they're just
+     regular CSS at that point. -->
+</head>
+<body>
+
+  <!-- ======================================================
+       BACKGROUND MUSIC
+       One <audio> element lives at the very top of <body>, outside
+       any section. Because it's never removed from the page, it can
+       keep playing continuously while the user scrolls between
+       sections below. Browsers block audio from autoplaying before
+       the user has interacted with the page at all, so we don't try
+       to autoplay this — we start it in JS the moment the user
+       submits a correct password (that click/tap IS the required
+       interaction).
+  ======================================================= -->
+  <audio id="bg-music" src="assets/audio/background-music.wav" loop preload="auto"></audio>
+
+  <!-- A second track, just for the letter section — js/script.js
+       crossfades between this and bg-music above as you scroll into
+       and back out of #letter (see the "LETTER MUSIC SWAP" part of
+       that file). Also never removed from the page, for the same
+       reason as bg-music: it needs to keep existing so it can be
+       faded in/out smoothly rather than abruptly stopped/restarted. -->
+  <audio id="letter-music" src="assets/audio/letter-music.wav" loop preload="auto"></audio>
+
+  <!-- A third track, just for the very last section (#outro, the "P.S."
+       footer) — the same crossfade idea as letter-music above, one
+       small step further: js/script.js swaps to this the moment the
+       footer scrolls into view, so the site closes out on its own
+       little musical note instead of just trailing off on whatever
+       was already playing. -->
+  <audio id="outro-music" src="assets/audio/outro-music.wav" loop preload="auto"></audio>
+
+  <!-- ======================================================
+       BACKGROUND PHOTO
+       Your glass-star reference image (with all its text/UI labels
+       removed — see assets/images/bg-glass-star.jpg), fixed in place
+       behind the whole site. Same idea as the earlier heart attempt —
+       "position: fixed" keeps it locked to the actual screen instead
+       of the page, so it reads as one continuous background behind
+       everything rather than being redrawn per section — just using
+       your photo directly instead of a hand-drawn shape this time.
+       See ".bg-photo" in style.css for how it's dimmed down so it
+       stays in the background, and why the gate doesn't need any
+       special-casing to keep this off of it.
+       aria-hidden because it's pure decoration — a screen reader has
+       nothing useful to announce about it.
+  ======================================================= -->
+  <div class="bg-photo" aria-hidden="true"></div>
+
+  <button id="mute-btn" class="mute-btn hidden" aria-label="Toggle music">🔊</button>
+
+  <!-- ======================================================
+       SECTION 1: THE OPENER / PASSWORD GATE
+       This is the only thing visible when the page first loads.
+       Everything else on the page exists already in the HTML, but
+       CSS keeps the <body> from scrolling until JS adds the
+       "unlocked" class (see js/script.js).
+  ======================================================= -->
+  <section id="gate" class="section gate">
+    <div class="gate-card">
+      <h1 class="gate-title reveal">hi love!</h1>
+      <p class="gate-subtitle reveal reveal-delay">happy anniversary &lt;3</p>
+
+      <div class="code-inputs" id="code-inputs">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" data-index="0" autocomplete="off">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" data-index="1" autocomplete="off">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" data-index="2" autocomplete="off">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit" data-index="3" autocomplete="off">
+      </div>
+
+      <p class="gate-error" id="gate-error">imagine getting it wrong — try again!</p>
+    </div>
+  </section>
+
+  <!-- ======================================================
+       SECTION 2: HOME LOBBY — the jigsaw puzzle
+       The board's "slots" and the tray's loose "pieces" below are
+       intentionally left EMPTY here — js/script.js builds them at
+       runtime (see the "PUZZLE" section of that file). That's a
+       common pattern: when something is repetitive and data-driven
+       (dozens of near-identical squares), it's easier to generate it
+       with a loop in JS than to hand-type each one.
+  ======================================================= -->
+  <section id="lobby" class="section lobby">
+    <h2 class="section-heading reveal">here's a little puzzle for you !</h2>
+    <p class="lobby-hint reveal reveal-delay">you can just drag and drop them, good luck! i made it black & white nyaha</p>
+
+    <!-- The reference thumbnail (like the picture on a puzzle box)
+         and the live progress counter sit side by side to save
+         vertical space, since screen height is the tight resource
+         here, not width. -->
+    <div class="puzzle-meta">
+      <img id="puzzle-reference" class="puzzle-reference" src="assets/images/puzzle-photo.jpg" alt="Reference: the finished photo">
+      <p class="puzzle-progress" id="puzzle-progress">0 / 0 placed correctly</p>
+    </div>
+
+    <div class="puzzle-wrap">
+      <div id="puzzle-board" class="puzzle-board"></div>
+      <!-- puzzle-tray holds every loose piece, neatly wrapped into
+           rows — a "pile of pieces" that's still tidy and bounded,
+           rather than scattered to random spots that could end up
+           off-screen. -->
+      <div id="puzzle-tray" class="puzzle-tray"></div>
+    </div>
+
+    <p class="solved-message" id="solved-message">🎉 damn i should've made it harder 🎉</p>
+  </section>
+
+  <!-- ======================================================
+       SECTION 3: PHOTO CAROUSEL
+       A big "scrapbook page" style slideshow — swipe/drag the track
+       by hand, or use the arrow buttons. Everything below is left
+       EMPTY on purpose — js/script.js builds all of it at runtime
+       from the CAROUSEL_PHOTOS list (see the "PHOTO CAROUSEL" section
+       of that file), the same data-driven pattern the puzzle
+       board/tray uses above: a small "Photo 4 of 30" position counter,
+       then one slide per photo/video, each with its own photo frame
+       AND caption built right in side by side (not a separate shared
+       caption element anymore — see buildCarousel in that file).
+  ======================================================= -->
+  <section id="gallery" class="section gallery">
+    <h2 class="section-heading reveal">my favorites of us throughout the year &lt;3</h2>
+
+    <p class="carousel-position" id="carousel-position"></p>
+
+    <div class="carousel-wrap">
+      <button type="button" class="carousel-arrow carousel-arrow-prev" id="carousel-prev" aria-label="Previous photo">&#8249;</button>
+
+      <div class="carousel-track" id="carousel-track"></div>
+
+      <button type="button" class="carousel-arrow carousel-arrow-next" id="carousel-next" aria-label="Next photo">&#8250;</button>
+    </div>
+  </section>
+
+  <!-- ======================================================
+       SECTION 4: THE LETTER
+       An envelope you tap/click to open — the flap folds back and
+       your actual letter (built from LETTER_PARAGRAPHS in
+       js/script.js, the same "content is just a list" pattern as
+       everywhere else on this site) fades and grows in over top of
+       it. Once opened it just stays open — there's nothing further
+       to do here, so there's no need to re-close it.
+  ======================================================= -->
+  <section id="letter" class="section letter">
+    <h2 class="section-heading reveal">a little love note for you</h2>
+
+    <p class="letter-hint reveal reveal-delay" id="letter-hint">tear it open! please don't read it out loud though baby..</p>
+
+    <div class="envelope-scene">
+      <button type="button" class="envelope" id="envelope-btn" aria-label="Open the letter">
+        <span class="envelope-body"></span>
+        <span class="envelope-flap"></span>
+        <span class="envelope-seal">&#9825;</span>
+      </button>
+
+      <!-- Left empty on purpose — js/script.js fills this in from
+           LETTER_PARAGRAPHS at runtime, one <p> per entry. -->
+      <div class="letter-paper" id="letter-paper">
+        <div class="letter-text" id="letter-text"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================
+       SECTION 5: P.S. (a small closing footer, not a full page)
+       Deliberately shorter than the sections above — .outro
+       overrides .section's min-height: 100vh down in the CSS, so
+       this just wraps its own small amount of content instead of
+       stretching to fill the whole screen like the others.
+  ======================================================= -->
+  <section id="outro" class="section outro">
+    <h2 class="section-heading reveal">P.S.</h2>
+    <p class="outro-hint reveal reveal-delay">a k2 song that makes me think of you :P</p>
+
+    <!-- Left empty here — js/script.js fills this in with either the
+         real Spotify embed (once SPOTIFY_EMBED_URL is set) or a
+         placeholder card explaining how to get one. See the
+         "SPOTIFY FOOTER" part of that file. -->
+    <div class="spotify-embed-wrap" id="spotify-embed-wrap"></div>
+
+    <!-- The very last line on the page — edit this to whatever little
+         closing note/signature you want (a name, a date, anything). -->
+    <p class="signature reveal reveal-delay">happy anniversary, ken! i love you &lt;3</p>
+  </section>
+
+  <!-- Little dots on the side to jump between sections once unlocked.
+       The last three start "locked" (see the PUZZLE GATE part of
+       script.js) — dimmed, and clicking one just bounces you back to
+       the puzzle instead of navigating — until the puzzle is solved,
+       at which point script.js removes the class from all three. -->
+  <nav class="dots hidden" id="dots">
+    <a href="#gate" class="dot active" data-target="gate"></a>
+    <a href="#lobby" class="dot" data-target="lobby"></a>
+    <a href="#gallery" class="dot locked" data-target="gallery"></a>
+    <a href="#letter" class="dot locked" data-target="letter"></a>
+    <a href="#outro" class="dot locked" data-target="outro"></a>
+  </nav>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

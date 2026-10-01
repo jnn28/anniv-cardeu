@@ -1,0 +1,1255 @@
+/* =========================================================
+   WEB FONTS
+   One font — Cutive Mono — used everywhere on the site, headings and
+   body text alike. It's a free, open-license Google Font: a classic,
+   elegant, narrow typewriter serif modeled on an old Underwood
+   typewriter — not rounded at all, which is the point (swapped in
+   to replace the earlier rounded Quicksand pick). It only comes in
+   one weight (400 — "regular"), so there's no font-weight: bold
+   anywhere below; asking for bold on a font that doesn't have a
+   real bold cut just makes the browser crudely smear/fake it, which
+   looks worse than just leaving it alone, so headings stand out
+   through size and letter-spacing instead (see .section-heading and
+   .gate-title further down).
+   @font-face is how you teach the browser about a font file it
+   doesn't already have installed — "here's a font named X, and
+   here's the file to download for it." After this, using that font
+   anywhere below is just a normal font-family value, same as any
+   font your computer came with. woff2 is the modern, small web font
+   file format basically every current browser supports. */
+@font-face {
+  font-family: "Cutive Mono";
+  src: url("../assets/fonts/cutive-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* =========================================================
+   GLOBAL RESET & BASICS
+   A tiny reset so every browser starts from the same blank slate.
+   ========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* Fixes the "blue film" that flashes over a tapped image/button on
+     Android Chrome (and some other mobile browsers): by default, ANY
+     tappable element gets a translucent gray-blue highlight rectangle
+     painted over it for the moment it's pressed — on plenty of phones
+     that renders as a fairly strong solid blue, not a subtle gray.
+     The puzzle is the most likely place to notice it, since dropping
+     the very last piece (a tap/click) is exactly when that highlight
+     would flash — right as the completed photo underneath is
+     revealing itself. Turning it off site-wide is standard practice
+     for anything that's meant to feel like an app/game rather than a
+     stack of tappable links. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Classic CSS gotcha: <button>, <input>, <select>, and <textarea> do
+   NOT automatically use the page's font the way normal text does —
+   every browser has its own built-in default (often plain Arial) it
+   uses for form controls instead, no matter what font-family you've
+   set on body/html. "font-family: inherit" tells them "no, actually
+   use whatever font your parent element is using" — this is what
+   makes the password-code boxes (a bunch of <input> elements) show
+   up in Cutive Mono like everything else, instead of the browser's
+   default font. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+:root {
+  /* The one shared dim/overlay color every section (except the gate)
+     uses over the background photo — see the "LOBBY / GALLERY /
+     LETTER" comment further down for why this is a single variable
+     instead of each section picking its own color. Plain black, no
+     hue at all, so it only ever adjusts brightness/contrast — never
+     tints the photo's actual color. */
+  --section-dim: rgba(0, 0, 0, 0.35);
+}
+
+html {
+  height: 100%;
+  /* A near-black base color behind absolutely everything. This matters
+     once the background photo (further down) exists: every section
+     below is switching from a fully solid color to a semi-transparent
+     one so the photo can show through it, which means whatever sits
+     BEHIND the sections is now visible too — without this, that would
+     just be the browser's default white, which would ruin the "deep
+     black, high-contrast glass" look we're going for. */
+  background: #050508;
+}
+body {
+  /* Cutive Mono (the @font-face rule up top) is the ONE font for the
+     whole site — every element inherits this unless something more
+     specific overrides it, and nothing below does anymore, on
+     purpose, so headings and body text all match. The names after
+     it are fallbacks — if Cutive Mono somehow fails to load, the
+     browser falls back to "Courier New" (a typewriter font almost
+     every device already has installed) before giving up entirely
+     on the generic system "monospace" family, so the typewriter
+     feel survives even if the download fails. */
+  font-family: "Cutive Mono", "Courier New", Courier, monospace;
+  color: #fff;
+  /* No fixed height here on purpose — body should simply grow as
+     tall as all 4 sections stacked together need it to be. <html> is
+     what stays viewport-sized and does the actual scrolling/clipping
+     (see below); if body ALSO had a fixed height plus hidden
+     overflow, it would clip its own content and nothing past the
+     first screen would ever be reachable no matter what <html> does. */
+}
+
+/* While the gate is locked, we don't want the visitor able to scroll
+   down and peek at the rest of the page. We control this by toggling
+   a class on <html> from JavaScript once the password is correct.
+
+   Why <html> and not <body>: when body's content is taller than the
+   viewport, most browsers actually hand the REAL scrolling job to
+   <html> (the root element) behind the scenes, even if you set
+   overflow/scroll-snap on body instead — a quirky, easy-to-miss part
+   of how CSS scrolling works. Declaring scroll-snap on body alone can
+   silently target the wrong element and the "snap to each section"
+   effect just won't happen, which is exactly the "doesn't lock/stay
+   smoothly" symptom this fixes. Putting these rules on <html> instead
+   targets the element that is actually doing the scrolling. */
+html {
+  overflow: hidden;
+}
+html.unlocked {
+  overflow-y: auto;
+  scroll-snap-type: y mandatory; /* makes scrolling "snap" to each section */
+}
+
+/* =========================================================
+   BACKGROUND PHOTO
+   Your glass-star reference photo (text/UI labels removed — see
+   assets/images/bg-glass-star.jpg) sitting behind every section
+   except the gate (the gate's own photo background is fully opaque,
+   so it naturally blocks this without any extra code) — see the
+   matching markup near the top of index.html and the "why
+   translucent, not solid" comments on .lobby/.gallery/.letter/.outro
+   below.
+
+   Why "position: fixed" is exactly right here: a fixed element is
+   positioned relative to the VIEWPORT, not the page, so it stays
+   perfectly in place on-screen no matter how far you've scrolled
+   down through the 5 sections. That's what makes this read as ONE
+   continuous background photo behind everything rather than being
+   redrawn separately in each section.
+   ========================================================= */
+.bg-photo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Explicit height instead of "inset: 0" (which just means "bottom:
+     0" too — let the box's edge, not its height, be defined by the
+     viewport). That distinction matters specifically on phones: as
+     you scroll, the browser's address bar slides away and the
+     visible screen area grows, but on iOS Safari a "bottom: 0" fixed
+     element doesn't reliably grow to match — it can stay sized to
+     however tall the screen was BEFORE the address bar hid, leaving
+     a real gap of plain black at the bottom once it's gone. Sizing
+     with height instead sidesteps that.
+     Two declarations on purpose, not one: "100dvh" (dynamic viewport
+     height) is the modern unit that's actually defined to track the
+     real, current visible height as the address bar animates — but
+     it's not supported on every browser, so "100vh" comes first as a
+     fallback. A browser that doesn't recognize "100dvh" simply
+     ignores that whole line and keeps the "100vh" above it; one that
+     does support it uses "100dvh" instead, since the later matching
+     declaration always wins. This fixes the actual gap without
+     touching "background-size: cover" below at all — the photo still
+     just crops to fill, never stretched. */
+  height: 100vh;
+  height: 100dvh;
+  z-index: 1; /* just above <html>'s plain background color, but under EVERYTHING else — every section, the puzzle, the carousel, the dots, the mute button, all of it */
+  pointer-events: none; /* pure decoration — clicks/drags always pass straight through to whatever's really underneath (the puzzle pieces, carousel, etc.) */
+  background: url("../assets/images/bg-glass-star.jpg") center/cover no-repeat;
+  opacity: 0.55; /* dimmed on purpose so it sits behind, not competing with the actual content — each section's own translucent background (below) tints/dims it further on top of this */
+}
+
+/* =========================================================
+   SECTIONS
+   Every section (#gate, #lobby, #gallery, #letter) is exactly one
+   viewport tall. Once scrolling is enabled, scroll-snap-align makes
+   the browser glide to the top of whichever section you land on,
+   giving the smooth "one screen at a time" feeling.
+   ========================================================= */
+.section {
+  min-height: 100vh; /* AT LEAST one full screen tall, but free to grow if its content needs more room */
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always; /* never let a fast scroll/swipe skip past a section without stopping on it */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* A real z-index (not the default "auto") matters here once the
+     background photo exists: a positioned element with NO z-index
+     doesn't automatically paint above a positioned sibling that DOES
+     have one, even if it comes later in the HTML — "auto" just means
+     "don't start a new stacking layer, sit wherever normal flow would
+     put you", which turned out to be BELOW .bg-photo's explicit
+     z-index: 1. Giving every section its own z-index puts it in that
+     same explicit-stacking-context layer, above the photo, the way
+     each looked "behind" was actually meant to work — the gate blocks
+     it via its own opaque background, and the rest show it through
+     their new translucent backgrounds (see those
+     .lobby/.gallery/etc. rules above). */
+  z-index: 2;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.section-heading {
+  /* No font-family here on purpose — it just inherits Cutive Mono
+     from body, same as everything else on the site. Cutive Mono
+     only has one weight, so instead of bolding to stand out from
+     the paragraph text below, these titles go a bit bigger and get
+     extra letter-spacing (space added between letters) — a classic
+     typewriter/letterhead trick for making a title read as "grander"
+     without needing a heavier weight. */
+  font-size: clamp(1.4rem, 3.6vw, 2.3rem);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.08em;
+}
+
+.coming-soon {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* =========================================================
+   SECTION 1 — GATE
+   ========================================================= */
+.gate {
+  background: linear-gradient(rgba(10, 8, 20, 0.55), rgba(10, 8, 20, 0.75)),
+              url("../assets/images/opener-bg.jpg") center/cover no-repeat;
+}
+
+.gate-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  max-width: 380px;
+  width: 100%;
+}
+
+.gate-title {
+  /* Same idea as .section-heading above — inherits Cutive Mono from
+     body, sized up with extra letter-spacing instead of bolding.
+     Monospace fonts like this one are wider per-letter than a
+     regular font at the same size, so this stays a bit smaller than
+     the old 2rem to keep "Enter the Code" on one line inside the
+     card instead of wrapping. */
+  font-size: 1.6rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.gate-subtitle {
+  opacity: 0.75;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.code-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.digit {
+  /* No font-family override here either — same Cutive Mono as the
+     rest of the site now. */
+  width: 3rem;
+  height: 3.5rem;
+  font-size: 1.8rem;
+  text-align: center;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.digit:focus {
+  border-color: #fff;
+}
+
+/* Shown briefly when the entered code is wrong */
+.gate-error {
+  margin-top: 1.25rem;
+  color: #ff8a8a;
+  font-size: 0.9rem;
+  min-height: 1.2rem;
+  opacity: 0; /* hidden by default */
+  transition: opacity 0.2s;
+}
+.gate-error.show {
+  opacity: 1;
+}
+
+/* A quick "shake" animation to signal a wrong code, applied via JS */
+.shake {
+  animation: shake 0.4s;
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+
+/* Fades out just the password card once the code is correct — NOT
+   the whole .gate section. That way the background photo (set on
+   .gate itself, in the rule above) stays put permanently, so if the
+   visitor scrolls back up to the very top later, they still see the
+   photo — just without the "enter the code" card, since they've
+   already unlocked it. animation-fill-mode: forwards is what makes
+   the card stay hidden after the animation finishes, instead of
+   snapping back to visible. */
+.gate-card.unlocking {
+  animation: fadeOut 0.8s ease forwards;
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
+
+/* =========================================================
+   LOBBY / GALLERY / LETTER
+   These each used to have their own tinted color (navy, purple,
+   green...) sitting over the background photo. Now they all share
+   ONE plain, colorless dark overlay instead — --section-dim, a single
+   CSS variable defined once up on :root — so what you actually see is
+   just the photo itself, dimmed the SAME amount everywhere for text
+   to stay readable over it, with no per-page color filter shifting
+   its look from section to section. Using one variable in all four
+   places (this trio plus .outro further down) instead of repeating
+   "rgba(0, 0, 0, 0.35)" four times also means changing the dimming
+   later is a one-line edit, not a four-line hunt. */
+.lobby { background: var(--section-dim); }
+.gallery { background: var(--section-dim); }
+.letter { background: var(--section-dim); }
+
+.lobby-hint {
+  opacity: 0.7;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  max-width: 480px;
+}
+
+/* Reference photo + progress counter, side by side, to keep this
+   whole "status strip" short and save vertical room for the actual
+   puzzle below. */
+.puzzle-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* The small "box lid" reference photo, so you know what you're
+   building toward — a real puzzle box always shows this! */
+.puzzle-reference {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  /* Belt-and-suspenders alongside the tap-highlight fix above: without
+     these, a click-drag that starts on this little thumbnail (easy to
+     do, sitting right next to the puzzle) triggers the browser's own
+     built-in "pick up and drag this image" behavior instead of doing
+     nothing — which shows its own translucent drag-ghost/selection
+     overlay right on top of it, the same "why is there a blue film on
+     this" effect, just from a different browser feature. -webkit-user-
+     drag and user-select turn that off; -webkit-touch-callout does the
+     same for the iOS long-press "save image" menu. */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.puzzle-progress {
+  opacity: 0.8;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* puzzle-wrap stacks the board and the tray vertically, centered. */
+.puzzle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+/* The board is a CSS Grid — JS sets how many rows/columns and the
+   exact pixel width/height, since those depend on PUZZLE_SIZE. */
+.puzzle-board {
+  display: grid;
+  gap: 3px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  transition: background 0.4s;
+  flex-shrink: 0; /* never let the board itself get squeezed smaller */
+  position: relative; /* so .puzzle-solved-photo below can sit exactly on top of it, covering the same area */
+}
+
+/* The REAL, single, uncut photo — not a slice of it — that fades in
+   once the puzzle is solved (see .puzzle-board.solved below), so what
+   you end up looking at is genuinely "just the photo itself" rather
+   than 16 individually-styled tiles trying to pass as one. It sits
+   directly on top of the pieces, exactly the same size as the board.
+   object-fit: cover is what a plain <img> uses to fill a box without
+   stretching — crop the excess off the longer side, never distort —
+   the same idea the pieces themselves use, just far simpler here
+   since there's only one whole image and no slicing involved. */
+.puzzle-solved-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none; /* purely decorative — never blocks a drag, even though dragging no longer matters once solved */
+  /* Same reasoning as .puzzle-reference above — pointer-events: none
+     already keeps this out of the way of clicks/drags, but these make
+     sure nothing about it (a stray long-press, a drag that grazes it)
+     can ever paint a browser-native overlay on top of it either. */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Every empty square on the board, before a piece is dropped in it */
+.puzzle-slot {
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  position: relative;
+}
+
+/* The tray: every loose piece, neatly wrapped into rows instead of
+   scattered to random spots. flex-wrap automatically starts a new
+   row once it runs out of horizontal room, so this container's
+   height naturally grows just enough to fit however many pieces you
+   choose — never more, never less, and never off-screen. */
+.puzzle-tray {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: min(94vw, 480px);
+}
+
+/* One puzzle piece. background-image/-size/-position/width/height
+   are all set in JS per-piece (each shows a different slice of the
+   same photo, sized to match whatever PUZZLE_SIZE currently is). */
+.puzzle-piece {
+  border-radius: 6px;
+  cursor: grab;
+  touch-action: none; /* stops the browser from trying to scroll the page while you drag on a touchscreen */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  position: relative; /* so the transform used while dragging doesn't disturb layout */
+  transition: opacity 0.4s ease; /* the fade-out used once solved, below */
+  /* Same reasoning as .puzzle-reference/.puzzle-solved-photo above.
+     script.js already calls preventDefault() the instant a drag
+     starts on a piece, which covers most of this — these are just the
+     CSS-level backup so a tap or long-press never shows a native
+     highlight/callout here either. */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Applied via JS for the brief moment a piece is being dragged */
+.puzzle-piece.dragging {
+  cursor: grabbing;
+  z-index: 30;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* Once the puzzle is fully and correctly assembled, we remove the
+   gaps/borders so all the pieces read as one seamless photo. */
+.puzzle-board.solved {
+  gap: 0;
+  padding: 0;
+  background: none;
+}
+.puzzle-board.solved .puzzle-slot {
+  border: none;
+  border-radius: 0;
+}
+/* This is the actual fix for pieces reading as "distorted"/chopped-up
+   even once correctly assembled: each piece still carries its own
+   rounded corners and drop shadow (see .puzzle-piece above) — those
+   never go away just because the pieces happen to line up, so they'd
+   still show as a visible grid of shadowed tiles, not one photo.
+   Rather than fight that seam-by-seam, the pieces simply fade out and
+   let .puzzle-solved-photo (the real, single, uncut photo sitting
+   right on top of them — see above) fade in at the same time, so
+   what's actually left on screen is just the photo. */
+.puzzle-board.solved .puzzle-piece {
+  opacity: 0;
+}
+.puzzle-board.solved .puzzle-solved-photo {
+  opacity: 1;
+}
+
+/* ---- Puzzle-solved star rain (see spawnStarRain() in script.js) ----
+   A big flurry of little black-and-white "paper star" stickers starts
+   above the top of the screen, spread out across its full width, and
+   tumbles down past the bottom over a few slow seconds — like paper
+   confetti actually falling, rather than shooting outward from a
+   point — scrapbook-style, to match the site's black-and-white
+   photo-album feel instead of standard colorful confetti. */
+.star-rain {
+  /* Purely a grouping wrapper so script.js can remove every star in one
+     shot once it's done falling — it isn't itself what positions them
+     (each .star-particle is "position: fixed" below, so it places
+     itself directly relative to the screen). */
+  pointer-events: none;
+}
+.star-particle {
+  /* "fixed" (not "absolute") is what lets these fall all the way down
+     the ENTIRE viewport instead of being boxed in by any container's
+     own size — --start-x (set per-star in JS, a random point across
+     the screen's width) is a plain viewport pixel coordinate, exactly
+     what "fixed" positioning expects. */
+  position: fixed;
+  top: -40px; /* just above the screen, so every star visibly enters from the top rather than fading in already on-screen */
+  left: var(--start-x, 50%);
+  z-index: 300; /* above absolutely everything else on the page */
+  /* Two background LAYERS, listed together in one background-image
+     (you can't split multi-layer backgrounds across separate
+     declarations — the second one just replaces the first): a diagonal
+     gradient for the base tone, plus a small tileable crinkled-paper
+     texture (assets/images/paper-texture.png — generated as random
+     angular "facets" with darker lines right at the seams between
+     them, the same visual cue real crumpled paper gives from creases
+     catching light differently facet to facet). background-blend-mode
+     is what actually merges them: "overlay" uses the texture to
+     darken/lighten the gradient underneath rather than covering it up,
+     so the star keeps its color but picks up a matte, creased
+     surface instead of reading as a flat, smooth sticker. */
+  background-image:
+    linear-gradient(135deg, #c7c7cc 55%, #8f8f96 100%),
+    url("../assets/images/paper-texture.png");
+  /* The gradient layer sizes itself to the star automatically ("auto");
+     the texture layer is pinned to a small, fixed pixel size instead
+     of "auto" so the grain stays fine and consistent no matter how
+     big or small any individual star happens to be — a bigger star
+     just shows more repeats of the same small texture tile, not one
+     giant stretched-out crease. */
+  background-size: auto, 22px 22px;
+  background-repeat: no-repeat, repeat;
+  background-blend-mode: overlay;
+  /* A simple 5-pointed star, cut with clip-path instead of an image —
+     the exact same shape is reused for the black stars below. */
+  clip-path: polygon(
+    50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%,
+    50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%
+  );
+  /* Just ONE drop-shadow (unchanged from before) — this was never the
+     expensive part on its own. The real cost was the black stars below
+     stacking FOUR of these per star; see the comment there. */
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+  opacity: 0;
+  animation-name: starFall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+  /* Hints to the browser that these two properties are about to be
+     animated, so it can do some of the rendering prep work (like
+     promoting the star to its own compositor layer) once up front
+     instead of repeatedly mid-animation. Only worth adding to elements
+     that actually animate a lot at once, like this — sprinkling it
+     everywhere can backfire and use more memory than it saves. */
+  will-change: transform, opacity;
+  /* animation-duration and animation-delay are set per-star in JS
+     (randomized, so they trickle down staggered instead of falling as
+     one rigid wave) — this shorthand-free split is what lets an inline
+     style override just those two pieces without needing "!important"
+     anywhere. */
+}
+/* The black stars get a thin white outline so they still read clearly
+   against the lobby's dark background — a plain solid black star would
+   otherwise nearly disappear against it. This used to be FOUR stacked
+   drop-shadow() filters (one per direction: left/right/up/down), and
+   that was the actual cause of the lag — each drop-shadow forces the
+   browser to re-rasterize the star's whole clipped silhouette as a
+   separate offscreen pass, so four of them is four full passes, PER
+   star, PER frame, for up to ~55 black stars at once. (box-shadow
+   would be cheaper still, but it doesn't work here — clip-path crops
+   an element down to the star shape, and box-shadow is drawn outside
+   that shape, so it would just get clipped away to nothing. drop-shadow
+   works because it shadows the star's actual rendered pixels, not its
+   invisible box.) A single drop-shadow with a tiny blur radius instead
+   of zero blur spreads softly in every direction at once, so it reads
+   as basically the same thin all-around outline for 1/4 the cost. */
+.star-particle-black {
+  /* Same "gradient + crinkle texture, blended with overlay" idea as
+     .star-particle above, just with a darker gradient underneath —
+     background-size/-repeat/-blend-mode don't need repeating here,
+     they're not overridden so the values from .star-particle still
+     apply (every star has BOTH classes at once; see spawnStarRain()
+     in script.js). Only slightly darker than before (#222222/#050505
+     → #161616/#020202) — there wasn't much room left before it just
+     turns into a black silhouette with no visible shading at all. */
+  background-image:
+    linear-gradient(135deg, #161616 55%, #020202 100%),
+    url("../assets/images/paper-texture.png");
+  filter: drop-shadow(0 0 1px #fff);
+}
+/* --drift / --fall-distance / --rot are set per-star, in JS, to a
+   random sideways sway, a fall distance that clears the whole screen
+   height, and a random spin — this one animation just reads them, so
+   every star tumbles down its own slightly different path without
+   needing its own @keyframes. */
+@keyframes starFall {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--drift), var(--fall-distance)) rotate(var(--rot));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Skip the falling-stars celebration entirely rather than showing a
+     jarring instant flash — the "You did it!" message below still
+     shows either way. */
+  .star-particle {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.solved-message {
+  margin-top: 1.5rem;
+  font-size: 1.4rem;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.solved-message.show {
+  opacity: 1;
+}
+
+/* =========================================================
+   SECTION 3 — PHOTO CAROUSEL
+   One photo at a time, swiped/dragged by hand or advanced with the
+   arrow buttons — the exact same "scroll + snap" trick the full-page
+   sections use (see html.unlocked up top), just turned sideways: the
+   x-axis instead of the y-axis.
+
+   Each slide is laid out as a "scrapbook page": a square-ish photo
+   pinned to one side, and its caption sitting in the open space next
+   to it — rather than the photo filling the whole slide with a
+   caption underneath. JS alternates which side the photo sits on
+   from slide to slide (see the .side-right class below) so the
+   whole strip doesn't look identical photo after photo.
+   ========================================================= */
+/* "Photo 4 of 30" (or "Video …" for a video slide) — a simple position
+   counter shown above the photo, so there's still some sense of where
+   you are and how much more there is, without needing a dot or pill
+   per photo. */
+.carousel-position {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+  opacity: 0.75;
+  margin-bottom: 1rem;
+}
+
+.carousel-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  /* Sized up a lot from the old min(90vw, 520px) — the whole point of
+     this redesign is for the carousel to read as a big, landscape
+     "slideshow" that's clearly the focal point of the section. */
+  max-width: min(95vw, 1200px);
+  /* A fixed height (rather than an aspect-ratio on the slide, like
+     before) is what makes "big but not crowding the heading above"
+     actually controllable: clamp() gives it room to grow on a tall
+     desktop window while capping how much vertical space it's ever
+     allowed to take, so .section-heading/.lobby-hint-style text above
+     it always has room to breathe. */
+  height: clamp(320px, 58vh, 560px);
+}
+
+/* The scrolling strip of photos itself. flex: 1 lets it fill
+   whatever room is left in .carousel-wrap once the two arrow buttons
+   have taken theirs; min-width: 0 stops flexbox's default "never
+   shrink below content size" behavior from fighting that. */
+.carousel-track {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  border-radius: 14px;
+  /* Hide the scrollbar cross-browser — the arrow buttons and dots
+     below are the intended way to navigate, so a visible scrollbar
+     would just be clutter. Dragging/swiping the track by hand still
+     works perfectly fine either way; this only hides the bar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Each slide is exactly one full "page" of the track — flex: 0 0
+   100% stops flexbox from ever squeezing a slide narrower to make
+   room for a neighbor, so only one photo is ever fully in view.
+   It's a flex ROW so the photo frame and caption can sit side by
+   side, sharing the slide's full height. */
+.carousel-slide {
+  flex: 0 0 100%;
+  /* Flex items default to min-width: auto, which lets a child with an
+     intrinsic size (the aspect-ratio'd photo frame below) silently
+     force the slide WIDER than its own 100% flex-basis to fit that
+     child — which in turn balloons the whole scrolling track's width
+     and pushes captions off-screen. min-width: 0 turns that off, so
+     100% always really means 100%. */
+  min-width: 0;
+  /* Needed as the containing block for .carousel-sticker below (an
+     absolutely-positioned sticker with no position: relative ancestor
+     would place itself relative to the whole page instead of just
+     this slide). */
+  position: relative;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  /* Trimmed down from clamp(1rem, 4vw, 2.5rem) — enough breathing room
+     to keep the photo and caption from feeling glued together, without
+     leaving an oversized gap between them. */
+  gap: clamp(0.75rem, 2.5vw, 1.5rem);
+  padding: clamp(0.5rem, 3vw, 2rem);
+  box-sizing: border-box;
+}
+
+/* Optional little decorations — a washi-tape strip, a small sticker,
+   even a tiny extra photo — scattered on top of a slide for a
+   scrapbook-page feel. Entirely opt-in: a photo with no "stickers"
+   list in CAROUSEL_PHOTOS gets none of this at all. See buildCarousel
+   in script.js for how each one gets positioned (top/left/right/
+   bottom/rotate, all set inline per sticker since every one is placed
+   a little differently on purpose). */
+.carousel-sticker {
+  position: absolute;
+  z-index: 5; /* above the photo frame and caption */
+  pointer-events: none; /* decorative only — never steals a drag/swipe from the track underneath */
+  user-select: none;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)); /* a little lift off the page, like it's really stuck on top */
+  /* A backstop, not the normal sizing control — "width" in the
+     sticker's own entry (CAROUSEL_PHOTOS, in script.js) is what you'll
+     actually change day to day. This just stops an especially large
+     width value from swallowing a small phone-width photo/caption if
+     you ever add one without checking mobile too. Raised alongside
+     the bigger sticker sizes below — big enough that a bold, corner-
+     spanning sticker (or a washi-tape strip laid clear across the top
+     of a photo) still reads as itself, without ever growing past
+     roughly half of even a narrow phone screen. */
+  max-width: min(60vw, 13rem);
+}
+
+/* Every OTHER slide flips to a row-reverse layout — same markup
+   (photo frame first, caption second, in the HTML/JS), just visually
+   mirrored — which is what puts the photo on the right instead of
+   the left without needing two different slide templates in JS. */
+.carousel-slide.side-right {
+  flex-direction: row-reverse;
+}
+
+/* A photo with no caption has nothing to put in that open space, so
+   it skips the side-pinned layout entirely and just centers itself,
+   a little larger, instead of leaving an awkward empty half. */
+.carousel-slide.no-caption {
+  justify-content: center;
+}
+
+/* The photo/video itself: square-ish or a touch taller than wide
+   (4/5). Sized from WIDTH (a share of the slide) with height derived
+   from aspect-ratio, and capped by max-height as a backstop — sizing
+   it the other way around (from height, with width derived) is what
+   caused the min-width bug above, since an aspect-ratio'd box with an
+   explicit height produces its own "intrinsic" width that isn't
+   capped by max-width until after it's already blown out the layout
+   around it. Going width-first avoids that entirely. */
+.carousel-photo-frame {
+  flex: 0 0 auto;
+  /* The containing block for .carousel-sticker (below) — this is what
+     lets a sticker pin itself to, say, "top + right" of the PHOTO
+     specifically, rather than of the whole (much wider) slide. It
+     does NOT clip its own contents (no overflow: hidden here) — that
+     job belongs to .carousel-photo-inner just below — specifically so
+     a sticker can hang slightly off the photo's actual edge, the way
+     a real sticker would, without getting cut off. */
+  position: relative;
+  /* Sized up a bit from min(55%, 22rem) so the photo reads as the
+     bigger, clearer focal point of the slide. */
+  width: min(62%, 25rem);
+  aspect-ratio: 4 / 5;
+  max-height: 100%;
+}
+.carousel-slide.no-caption .carousel-photo-frame {
+  width: min(76%, 30rem);
+}
+
+/* The actual cropped photo/video lives in this inner box instead of
+   directly in .carousel-photo-frame, specifically so the frame above
+   can stay overflow-visible (for stickers) while this stays
+   overflow-hidden (for the rounded corners + center-crop). */
+.carousel-photo-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Photos AND videos get the exact same treatment inside their frame —
+   a video slide is just a <video> sitting where an <img> would, so it
+   can share every one of these rules. object-fit: cover is what does
+   the actual "crop to fill the frame without stretching/distorting"
+   work, whether the original file is square, portrait, or landscape. */
+.carousel-photo-inner img,
+.carousel-photo-inner video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none; /* lets a click-drag reach the track underneath, instead of triggering the browser's own built-in "drag this image" behavior (or, for a video, its own play/pause-on-click) */
+}
+
+/* Prev/next buttons — same rounded, semi-transparent look as the
+   music mute button, just sitting inline in the layout instead of
+   fixed to a corner of the screen. */
+.carousel-arrow {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.carousel-arrow:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: scale(1.08);
+}
+/* JS disables whichever arrow would go past the first/last photo */
+.carousel-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+/* The per-photo caption. It USED to be one shared element sitting
+   under the whole carousel; now each slide gets its own, living in
+   the open space beside the photo frame — so JS only creates this
+   element at all for a photo that actually has a caption (see
+   buildCarousel), rather than needing a .hidden toggle. flex: 1 lets
+   it soak up whatever width the photo frame isn't using. */
+.carousel-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-style: italic;
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  opacity: 0.85;
+  line-height: 1.6;
+  /* The containing block for a sticker set to "on: caption" in
+     script.js — same idea as .carousel-photo-frame's own
+     position: relative above, just for stickers pinned next to the
+     CAPTION instead of the photo. Without this, that sticker would
+     position itself against the whole (much wider) slide instead of
+     hugging the caption's own small box. */
+  position: relative;
+}
+
+/* =========================================================
+   SECTION 4 — THE LETTER
+   An envelope and a letter sit exactly on top of each other, both
+   absolutely centered inside .envelope-scene. Nothing physically
+   moves "out of" the envelope — instead, clicking it opens the flap,
+   then the envelope fades/shrinks away while the letter fades/grows
+   in over the top of it. Two elements crossfading in place turns out
+   to be a lot simpler (and just as convincing) than trying to
+   animate exact pixel positions for a paper "sliding out."
+   ========================================================= */
+.letter-hint {
+  opacity: 0.7;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.envelope-scene {
+  position: relative;
+  width: 100%;
+  max-width: min(92vw, 460px);
+  /* Reserves enough room for whichever of the envelope/letter is
+     currently showing — both are position: absolute below, which
+     takes them out of normal layout flow, so without an explicit
+     height here this whole container would collapse to nothing and
+     the section's flex centering would have nothing to center. */
+  min-height: 400px;
+}
+
+.envelope {
+  /* --peel/--melt (0 to 1) drive how far open the flap is and how
+     "melted" the seal looks — see .envelope-flap/.envelope-seal below.
+     JS sets these directly (in real time, while dragging) via
+     style.setProperty(); the values here are just the resting
+     defaults before any interaction starts. */
+  --peel: 0;
+  --melt: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 160px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  touch-action: none; /* so dragging on a touchscreen tears the seal instead of scrolling the page — same reasoning as the puzzle pieces */
+  /* Gives .envelope-flap's rotateX below an actual vanishing point to
+     rotate toward, instead of flattening in a straight, flat line —
+     this is what makes the fold read as real 3D depth rather than a
+     plain 2D squash. (A flat rectangle rotated to face exactly
+     edge-on to the viewer is genuinely a sliver at that one instant
+     either way — real paper does that too — this just makes
+     everything approaching and leaving that instant look right.) */
+  perspective: 600px;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.5s ease 0.5s, transform 0.5s ease 0.5s; /* the 0.5s DELAY (the 2nd time value) is what makes the envelope wait for the flap to finish opening before it starts fading away */
+}
+/* Applied via JS for as long as a drag is actively in progress (see
+   the "OPENING THE ENVELOPE" part of script.js) — turns OFF the
+   flap/seal's own transitions below so they track the pointer 1:1,
+   with no easing lag, while a finger/cursor is actually moving. */
+.envelope.dragging {
+  cursor: grabbing;
+}
+/* transition is set on .envelope-flap/.envelope-seal THEMSELVES (below),
+   not inherited from their parent .envelope, so it has to be turned off
+   on each of them individually here while a drag is in progress. */
+.envelope.dragging .envelope-flap,
+.envelope.dragging .envelope-seal {
+  transition: none;
+}
+/* Once opened, the envelope fades/shrinks out and stops being
+   clickable — there's nothing left to open a second time. */
+.envelope.open {
+  --peel: 1;
+  --melt: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85) translateY(-10px);
+  pointer-events: none;
+}
+
+.envelope-body {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+}
+
+/* The flap: a triangle pointing down from the top edge, made by
+   clipping a plain rectangle rather than the old border-triangle
+   trick — much easier to read and resize. transform-origin: top
+   keeps its rotation hinged along the top edge, like a real folded
+   flap, instead of spinning around its own center.
+   NOTE: border and clip-path don't play well together (a border gets
+   clipped unevenly right along with the shape, so it often looks
+   broken right at the point) — that's why this uses a drop-shadow
+   for a subtle edge instead of an actual border. */
+.envelope-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 58%;
+  background: rgba(255, 255, 255, 0.18);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.25));
+  transform-origin: top center;
+  transition: transform 0.6s ease;
+  /* Peels open in step with --peel (0 = shut, 1 = fully rotated back)
+     instead of only ever being fully open or fully shut — that's what
+     lets dragging peel it open gradually rather than all at once. */
+  transform: rotateX(calc(var(--peel, 0) * -180deg));
+}
+
+/* A little wax seal sitting right where the flap's point meets the
+   body — purely decorative at rest, but it's also what you actually
+   grab to drag the envelope open (see script.js). */
+.envelope-seal {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #fff;
+  z-index: 2; /* above the flap, so it doesn't get covered mid-rotation */
+  /* "Melts" as --melt climbs toward 1 while dragging: squashes
+     vertically, widens slightly, rounds off less (border-radius
+     shrinks toward a blobby shape rather than a perfect circle), sinks
+     down a touch, and fades — a simple stand-in for wax melting away,
+     built entirely from calc() rather than a second animated element. */
+  border-radius: calc(50% - (var(--melt, 0) * 18%));
+  opacity: calc(1 - var(--melt, 0));
+  transform:
+    translate(-50%, -50%)
+    scaleY(calc(1 - var(--melt, 0) * 0.6))
+    scaleX(calc(1 + var(--melt, 0) * 0.3))
+    translateY(calc(var(--melt, 0) * 8px));
+  transition: transform 0.6s ease, opacity 0.6s ease, border-radius 0.6s ease;
+}
+
+/* The letter card itself — same translucent "frosted glass" look as
+   .gate-card, so it visually matches the very first thing a visitor
+   saw, tying the beginning and end of the site together. */
+.letter-paper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  max-width: 420px;
+  max-height: 60vh;
+  overflow-y: auto; /* in case a real letter ends up longer than one screen */
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 2rem 1.75rem;
+  text-align: left;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 0.5s ease 0.35s, transform 0.5s ease 0.35s;
+  pointer-events: none; /* stays non-interactive (and unreadable by screen readers as "in view") until actually opened */
+}
+.letter-paper.open {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.letter-text p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  /* Lets a literal "\n" typed inside any LETTER_PARAGRAPHS string
+     (handy for something like a signature line) show up as an actual
+     line break, instead of being silently collapsed the way plain
+     HTML text normally collapses whitespace. */
+  white-space: pre-line;
+}
+.letter-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================================
+   SECTION 5 — P.S. (SPOTIFY FOOTER)
+   The one section that's deliberately NOT a full screen — this
+   overrides .section's min-height: 100vh so it just wraps its own
+   small amount of content instead. It still keeps everything else
+   .section gives it for free (the dark background is set below,
+   scroll-snap-align, the flex centering, etc.) — just shorter.
+   ========================================================= */
+.outro {
+  min-height: 0;
+  padding: 4rem 1.5rem;
+  background: var(--section-dim); /* same shared, colorless dim as .lobby/.gallery/.letter above — see that comment */
+}
+
+.outro-hint {
+  opacity: 0.7;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.spotify-embed-wrap {
+  width: 100%;
+  max-width: min(92vw, 420px);
+}
+
+/* The actual Spotify embed, once SPOTIFY_EMBED_URL is set — see the
+   "SPOTIFY FOOTER" part of js/script.js. Spotify's own embed already
+   looks polished on its own, so this just makes sure it doesn't spill
+   past its container. */
+.spotify-embed-wrap iframe {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+/* Shown INSTEAD of the iframe above whenever SPOTIFY_EMBED_URL is
+   still empty — same translucent card look as the gate/letter cards,
+   so it reads as "a real part of the page," not a broken feature. */
+.spotify-placeholder {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+}
+.spotify-placeholder-icon {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+.spotify-placeholder p {
+  opacity: 0.75;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.spotify-placeholder code {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* The very last thing on the page — a small, quiet closing line under
+   the song, styled like a handwritten note rather than another
+   heading: smaller, softer, italic. Edit the text directly below in
+   index.html. */
+.signature {
+  margin-top: 2.5rem;
+  font-size: 0.85rem;
+  opacity: 0.55;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+/* =========================================================
+   SCROLL-REVEAL ANIMATIONS
+   =========================================================
+   Applied to headings/hint text across several sections above (look
+   for class="reveal" in index.html) — each one starts hidden and
+   shifted down slightly, then script.js's revealObserver adds
+   "in-view" the first time it scrolls into view, which is what
+   actually triggers the fade + slide via the transition below.
+   reveal-delay just staggers a second element very slightly behind
+   the first, so e.g. a section's heading settles in just before its
+   hint text follows, rather than both appearing in perfect lockstep.
+   ========================================================= */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay {
+  transition-delay: 0.15s;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Show everything immediately, with no motion at all, for anyone
+     whose OS is set to reduce motion — same reasoning as the star
+     burst's own prefers-reduced-motion rule above. */
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* =========================================================
+   MUSIC TOGGLE BUTTON
+   ========================================================= */
+.mute-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.3s;
+}
+.mute-btn:hover {
+  transform: scale(1.08);
+}
+
+/* =========================================================
+   SIDE NAV DOTS
+   ========================================================= */
+.dots {
+  position: fixed;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 50;
+}
+.dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transition: background 0.2s, transform 0.2s;
+}
+.dot.active {
+  background: #fff;
+  transform: scale(1.3);
+}
+/* The gallery/letter/outro dots start with this class in the HTML (see
+   the PUZZLE GATE part of script.js) and it's removed the instant the
+   puzzle is solved — dimmed and not-allowed as a passive hint that
+   they're not clickable yet, well before anyone actually tries. */
+.dot.locked {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Utility: hide things until JS decides to reveal them */
+.hidden {
+  display: none !important;
+}
